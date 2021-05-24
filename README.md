@@ -33,6 +33,8 @@
         ?>
   #### Resources
   ###### assets
+  ###### ##bower
+  ###### ####vendor
   ###### view
   #### Public
   ###### images
@@ -90,8 +92,39 @@
         
         >npm install gulp bower --global
         **  bower ):- bower is another tool for front-end dependence management
+  #### .bowerrc
+     This hidden file look for specified directory and install all my front-end component inside that directory, here is sample:
+     {
+        "directory": "resources/asset/bower/vendor/"
+     }
+  #### bower.json
+     {
+        "name": "{project name}"
+     }
+  ####
+    
  
-     
+ ## Installing dependences needed for front-end part
+  1. first required is called 'zurb foundation', this is used for 
+  > bower install foundation-sites --save
+  
+  2. Next is 'motion UI' of zurb foundation too
+  > bower install motion-ui --save
+
+  because bower' s Jquery will cause problems you need to specify it directly in bower.json dependencies As below:
+  
+  {
+    "name": .........,
+    "dependence": {
+      "foundation-sites": ........
+      "jquery": "~2.2",
+      "motion-ui": ........
+    }
+  }
+  
+  3. adding 'slick slider' for carousel sliders.
+  > bower install --save slick-carousel
+  
      
      
      
