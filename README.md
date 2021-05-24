@@ -67,6 +67,30 @@
      DB_NAME = db_name
      DB_USERNAME = root
      DB_PASSWORD = ""
+  #### package.json
+     This package.json is of NodeJs, you have to create it manually as follow:
+     {
+        "author": "Joel Uwineza",
+        "description": "{Your project descriptions goes right here}",
+        
+        "private": true,
+        
+        "dependence": {
+          "gulp": "~3.9",
+          "laravel-elixir": "~5.0.0" 
+        }
+     }
+     
+     Note: 
+        ** gulp ):- gulp is used for task automation that compile all of our css and javascript in just single minified format
+        ** laravel-elixir ):- laravel-elixir is very nice wrapper over gulp package, it help us to easily specify different task that we want to do with gulp
+        
+        after writing and save your package.json, in your cmd go ahead run
+        > npm install
+        
+        >npm install gulp bower --global
+        **  bower ):- bower is another tool for front-end dependence management
+ 
      
      
      
