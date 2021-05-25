@@ -33,8 +33,20 @@
         ?>
   #### Resources
   ###### assets
-  ###### ##bower
-  ###### ####vendor
+  ###### ## bower
+  ###### #### vendor
+  ###### ## css
+  ###### ## js
+  ###### ## sass
+  ###### #### app.scss
+              //font
+              @import url(https://fonts.googleapis.com/css?font=Railway:300,400,600);
+              
+              @import '../bower/vender/foundation-sites/assets/foundation';
+              
+              @import '../bower/vender/motion-ui/src/motion-ui';
+              @include motion-ui-transitions
+              @include motion-ui-animations
   ###### view
   #### Public
   ###### images
@@ -101,6 +113,40 @@
      {
         "name": "{project name}"
      }
+  #### gulp.js
+     var elixir = require('laravel-elixir');
+     //make elixir not to compile all sourcemap
+     elixir.config.sourcemaps = false;
+     
+     var gulp = require('gulp');
+     
+     elixir(function(mix) {
+     
+        //compile sass to css
+        mix.sass('resources/assets/sass/app.scss', 'resources/assets/css');
+        
+        //combine css files
+        mix.style(
+          [
+            'css/app.css',
+            'bower/vendor/slick-carousel/slick/slick.css'
+          ], 
+          'public/css/all.css', //output file
+          'resources/assets' //sources directory);
+          
+          var bowerpath = 'bower/vendor'
+          mix.script(
+            [
+              //Jquery
+              bowerpath + '/jquery/dist/jquery.min.js',
+              //founation javascript
+              bowerpath + '/foundation-sites/dist/js/foundation.min.js',
+              //other dependences
+              bowerpath + '/slick-carousel/slick/slick.min.js'
+            ], 'public/js/app.js', 'resources/assets'
+          )
+     });
+  
   ####
     
  
@@ -124,6 +170,13 @@
   
   3. adding 'slick slider' for carousel sliders.
   > bower install --save slick-carousel
+ 
+ ## Task automation with gulp and laravel-elixir
+  After creating and writing content of gulp.js, the run command:
+  > gulp
+  
+  To watch all the changes
+  >gulp watch
   
      
      
