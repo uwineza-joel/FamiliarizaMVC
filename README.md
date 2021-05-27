@@ -1,7 +1,121 @@
 # FamiliarizaMVC
 ## setup working environment
   #### App
-  ###### class
+  ###### classes
+  ###### ## Database.php
+          <?php
+            namespace App\Classes;
+            use Illuminate\Database\Capsule\Manager as Capsule;
+            
+            class Database
+            {
+              public function __construct()
+              {
+                $db = new Capsule;
+                $db->addConnection([
+                  'driver' => getenv('DB_DRIVER'),
+                  'host' => getenv('DB_HOST'),
+                  'database' => getenv('DB_NAME'),
+                  'username' => getenv('DB_USERNAME'),
+                  'password' => getenv('DB_PASSWORD'),
+                  'charset' => 'utf8',
+                  'collation' => 'utf8_unicode_ci',
+                  'prefix' => ''
+                ]);
+                
+                $db->setAsGlobal();
+                $db->bootEloquent();
+              }
+            }
+          ?>
+  ###### ## Mail.php
+          <?php
+            namespace App\Classes;
+            use PHPMailer;
+            
+            class Mail
+            {
+               protected $mail;
+               public function __construct()
+               {
+                  $this->mail = new PHPMailer;
+                  $this->setUp();
+               }
+               public function setUp()
+               {
+                  $this->mail->isSMTP();
+                  $this->mail->mailer = 'smtp';
+                  $this->mail->SMTPAuth = true;
+                  $this->mail->SMTPSecure = 'tls';
+                  
+                  $this->mail->Host = getenv('SMTP_HOST');
+                  $this->mail->Port = getenv('SMTP_PORT');
+                  
+                  $environment = getenv('APP_ENV');
+                  if($envirnment === 'local') { $this->mail->SMTPDebug = 2; }
+                  
+                  //auth info
+                  $this->mail->Username = getenv('EMAIL_USERNAME');
+                  $this->mail->Password = getenv('EMAIL_PASSWORD');
+                  
+                  $this->mail->isHTML(true);
+                  $this->mail->singleTo = true;
+                  
+                  //sender info
+                  $this->mail->From = getenv('ADMIN_EMAIL');
+                  $this->mail->FromName = getenv('APP_NAME');
+               }
+               public function send($data) {
+                  $this->mail->addAddress($data['to'], $data['name']);
+                  $this->mail->Subject = $data['subject'];
+                  $this->mail->Body = make($data['view'], array('data' => $data['body']));
+                  return $this->email->send();
+               }
+            }
+          ?>
+  ###### ## ErrorHandler.php
+          <?php
+              namespace App\Classes
+              
+              class ErrorHandler
+              {
+                public function handleErrors($error_number, $error_message, $error_file, $error_line) {
+                  $error = "[{$error_number}] An error occured in file {$error_file} on line $error_line: $error_message";
+                  
+                  $environment = getenv('APP_ENV');
+                  
+                  if($environment) {
+                    $whoops = new \Whoops\Run;
+                    $whoops->pushHandler(new \Whoops\Handler\PrettyPageHandler);
+                    $whoops->register();
+                  }
+                  else {
+                    $data = [
+                      'to' => getenv('ADMIN_EMAIL'),
+                      'subject' => 'System error',
+                      'view' => 'welcome',
+                      'name' => 'Joe Doe',
+                      'body' => $error
+                    ];
+                    ErrorHandler::emailAdmin($data)->outputFriendlyError();
+                  }
+                }
+              
+                public function outputFriendlyError() {
+                  ob_end_clean();
+                  view('errors/generic');
+                  exit;
+                }
+              
+                public static function emailAdmin($data) {
+                  
+                  //No need to require Mail class bcs it's in same namespace
+                  $mail = new Mail;
+                  $mail->send($data);
+                  return new static;
+                }
+              }
+          ?>
   ###### config
   ###### ## _env.php
           this is file where we load our .env file
@@ -17,19 +131,142 @@
             
           ?>
   ###### controllers
+  ###### ## BaseController.php
+          <?php
+              namespace App\Controller;
+              
+              class BaseController
+              {
+                
+              }
+          ?>
+  ###### ## IndexController.php
+          <?php
+              namespace App\Controller;
+              //import email for test
+              use App\Classes\Mail;
+              
+              class IndexController
+              {
+                public function show()
+                {
+                  echo "Inside Homepage from controller class";
+                  
+                  //Testing email server
+                  $mail = new Mail();
+                  $data = [
+                    'to' => 'user@gmail.com',
+                    'subject' => 'Welcome to my store',
+                    'view' => 'welcome',
+                    'name' => 'Joe Doe',
+                    'body' => 'Testing email template'
+                  ];
+                  if($mail->send($data)) {
+                    echo "Email sent successfully";
+                  }
+                  else{
+                    echo 'sent failure';
+                  }
+                }
+              }
+          ?>
   ###### functions
   ###### ## helper
+          <?php
+              use Philo\Blade\Blade;
+              
+              function view($path, array $data = []) {
+                $view = __DIR__.'/../../resources/view';
+                $cache = __DIR__.'/../../../bootstrapp/cache';
+                
+                $blade = new Blade($view, $cache);
+                
+                echo $blade->view()->make($path, $data)->render();
+              }
+              
+              function make($filename, $data) {
+                extract($data);
+                
+                //turn on output buffering
+                ob_start();
+                
+                //include template
+                include(__DIR__.'/../../resources/views/emails' . $filename . '.php');
+                
+                //get content of file
+                $content = ob_get_contents();
+                
+                //erase the output and turn off output buffering
+                ob_end_clean();
+                
+                return $content; 
+              }
+          ?>
   ###### models
   ###### routing
+  ###### ## routes.php
+          <?php
+              $router = new AltoRouter;
+              
+              $router->map('GET', '/about', '', 'about_us');
+              
+              $match = $router->match();
+              
+              if()
+              
+          ?>
+  ###### ## RouteDispatcher.php
+          <?php
+              namespace App;
+              
+              use AltoRouter;
+              class RouteDispatcher
+              {
+                protected $match;
+                protected $controller;
+                protected $method;
+                public function __construct(AltoRouter $router) 
+                {
+                  $this->match = $router->match();
+                  
+                  if($this->match) {
+                    list($controller, $method) = explode('@', $this->match['target']);
+                    $this->controller = $controller;
+                    $this->method = $method;
+                    
+                    if(is_callable(array(new $this->controller, $this->method))) {
+                      call_user_func_array(array(new $this->controller, $this->method), 
+                        array($this->match['params']));
+                    }
+                    else {
+                      echo "The method {$this->method} is not defined in {$this->controller}";
+                    }
+                  }
+                  else {
+                    header($_SERVER['SERVER_PROTOCOL'].'404 not found');
+                    view('error/404');
+                  }
+                }
+              }
+          ?>
   #### Bootstrapp
-  ###### caches
+  ###### cache
   ###### init.php
         This file help us to initialize our environment
         <?php
           
           if(!isset($_SESSION)) session_start();
-          require_once __DIR__.'../app/config/_env.php;
-        
+          require_once __DIR__.'/../app/config/_env.php;
+          
+          //instantiate database class
+          new \App\Classes\Database();
+          
+          //set custom error handler
+          set_error_handler([new \App\Classes\ErrorHandler(), 'handleErrors']);
+          
+          require_once __DIR__.'/../app/routing/routes.php;
+          
+          new \App\RouteDispatcher($router);
         ?>
   #### Resources
   ###### assets
@@ -47,7 +284,31 @@
               @import '../bower/vender/motion-ui/src/motion-ui';
               @include motion-ui-transitions
               @include motion-ui-animations
-  ###### view
+  ###### views
+  ###### ## emails
+  ###### #### welcome.php
+            write simple HTML to welcome new user
+            <body>
+              email body <?php echo $data; ?>
+            </body>
+  ###### #### errors.php
+            <div style=''>
+              <img src='' />
+                <?php echo "Error: {$data}"; ?>
+              <p>
+                Regards <br /><br />
+                <strong> StoreSaler Team </strong>
+              </p>
+            </div>
+  ###### ## errors
+  ###### #### 404.blade.php
+             <h1>
+                Page not found
+             </h1>
+  ###### #### generic.blade.php
+            <div style=''>
+              <h1> A system error occurred, Please try again later.</h1>
+            </div>
   #### Public
   ###### images
   ###### index.php
@@ -67,6 +328,16 @@
           echo $app_name;
           
         ?>
+  ###### .htaccess
+        #turn on rewrite engine
+        RewriteEngine on
+        
+        #IF REQUESTED FILE IS NOT A REAL FILE
+        RewriteCond %{REQUEST_FILENAME} !-f
+        
+        #redirect all request to index.php
+        RwriteRule . index.php [L]
+        
   #### vendor
      Here you have to require vlucas composer package to load .env variables 
   #### .env
@@ -81,6 +352,14 @@
      DB_NAME = db_name
      DB_USERNAME = root
      DB_PASSWORD = ""
+     
+     #Mail Credentials
+     EMAIL_USERNAME=gmail_address_yours
+     EMAIL_PASSWORD=XXXXXXXXXXX
+     SMTP_PORT=587
+     SMTP_HOST=smtp.gmail.com
+     ADMIN_EMAIL=gmail_support_address
+     
   #### package.json
      This package.json is of NodeJs, you have to create it manually as follow:
      {
@@ -178,6 +457,31 @@
   To watch all the changes
   >gulp watch
   
-     
+ ## Altorouting and mod_rewrite
+  This will help in create routes of our project links
+  > composer require altorouter/altorouter
+
+ ## Setup blade template engine
+  the laravel blade is templating engine used for view part of MVC
+  > composer require philo/laravel-blade
+ 
+ ## set autload parameter in composer.json
+  the sample of all required to be loaded are:
+  "autoload": {
+    "psr-4": {
+      "App\\": "app"
+    },
+    "files": ["app/functions/helper.php"]
+  },
+  "config": {
+    "optimize-autoloader": true
+  }
+  
+## set Object-relational mappting (ORM)
+ The ORM is technology that will help you in operationg with database more easily. it' s installed with composer as follow:
+ > composer require illuminate/database
+
+## error Handling
+ > composer require filp/whoops --dev
      
      
